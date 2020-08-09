@@ -5,6 +5,10 @@ import ida_segment
 import ida_bytes
 import ida_nalt
 
+import ida_kernwin as kw
+from idaapi import PluginForm
+from PyQt5 import QtWidgets, QtGui
+
 
 def cstr(ea):
     try:
@@ -92,22 +96,23 @@ def method_list(ea):
 
 
 class Base(object):
-    def __init__(self, name):
+    def __init__(self, name, ea):
         self.name = name
+        self.ea = ea
 
     def __repr__(self):
         return '<%s "%s">' % (self.__class__.__name__, self.name)
 
 
 class Clazz(Base):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, ea):
+        super().__init__(name, ea)
         self.methods = {}
 
 
 class Protocol(Base):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, ea):
+        super().__init__(name, ea)
         self.methods = []
 
 
@@ -169,7 +174,7 @@ class ClassDump(object):
         protocol_ea = ida_bytes.get_qword(ea)
         protocol_name = cstr(ida_bytes.get_qword(protocol_ea + 8))
         method_list_ea = ida_bytes.get_qword(protocol_ea + 3 * 8)
-        p = Protocol(protocol_name)
+        p = Protocol(protocol_name, ea=protocol_ea)
         self.print('@protocol', protocol_name)
         for method in method_list(method_list_ea):
             p.methods.append(cstr(method.name))
@@ -196,7 +201,7 @@ class ClassDump(object):
         clazz_info = Objc2ClassRo(ida_bytes.get_bytes(
             clazz.info, Objc2ClassRo.length))
 
-        c = Clazz(cstr(clazz_info.name))
+        c = Clazz(cstr(clazz_info.name), ea=clazz_ea)
 
         self.print('@interface', cstr(clazz_info.name))
         for method in method_list(meta_info.base_meths):
@@ -216,19 +221,92 @@ class ClassDump(object):
         self.lookup[ea] = c
 
 
-def main():
-    import ida_kernwin as kw
+class ClassView(PluginForm):
+    cols = ['Name', 'Reference']
 
-    path = kw.ask_file(0, '*.txt', 'Save to')
-    if not path:
-        print('Cancelled')
-        return
+    def __init__(self):
+        super(ClassView, self).__init__()
+        self.data = None
+        self.tree = None
 
-    with open(path, 'a') as fp:
-        classdump = ClassDump(output=fp)
+    def dblclick(self, item):
+        '''Handle double click event.'''
+        try:
+            idaapi.jumpto(int(item.text(1), 16))
+        except:
+            pass
+
+    def load_data(self):
+        kw.show_wait_box('Building class information')
+        classdump = ClassDump()
         classdump.parse()
-        for clazz in classdump.classes:
-            print(clazz.name)
+        kw.hide_wait_box()
+
+        self.data = classdump
+
+        class_root = QtWidgets.QTreeWidgetItem(self.tree)
+        class_root.setText(0, 'Classes')
+        class_root.setExpanded(True)
+
+        for clazz in self.data.classes:
+            item = QtWidgets.QTreeWidgetItem(class_root)
+            item.setText(0, clazz.name)
+            item.setText(1, hex(clazz.ea))
+
+            for method, imp in clazz.methods.items():
+                child = QtWidgets.QTreeWidgetItem(item)
+                child.setText(0, method)
+                child.setText(1, hex(imp))
+
+        protocol_root = QtWidgets.QTreeWidgetItem(self.tree)
+        protocol_root.setText(0, 'Protocols')
+
+
+    def OnCreate(self, form):
+        '''Called when the plugin form is created'''
+
+        self.parent = self.FormToPyQtWidget(form)
+
+        self.tree = QtWidgets.QTreeWidget()
+        self.tree.setColumnCount(len(self.cols))
+        self.tree.setHeaderLabels(self.cols)
+        self.tree.itemDoubleClicked.connect(self.dblclick)
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.tree)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.load_data()
+
+        self.tree.setColumnWidth(0, 512)
+        self.tree.setColumnWidth(1, 512)
+        self.parent.setLayout(layout)
+
+    def OnClose(self, form):
+        '''Called when the plugin form is closed.'''
+        del self
+
+    def Show(self):
+        '''Creates the form is not created or focuses it if it was.'''
+        return PluginForm.Show(self, 'ClassDump')
+
+
+def main():
+    view = ClassView()
+    view.Show()
+
+    # path = kw.ask_file(0, '*.txt', 'Save to')
+    # if not path:
+    #     print('Cancelled')
+    #     return
+
+    # with open(path, 'a') as fp:
+    #     classdump = ClassDump(output=fp)
+    #     classdump.parse()
+
+    # for clazz in classdump.classes:
+    #     print(clazz.name)
 
 
 if __name__ == "__main__":
