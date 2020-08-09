@@ -176,9 +176,11 @@ class ClassDump(object):
         method_list_ea = ida_bytes.get_qword(protocol_ea + 3 * 8)
         p = Protocol(protocol_name, ea=protocol_ea)
         self.print('@protocol', protocol_name)
+        # todo: support class methods
         for method in method_list(method_list_ea):
-            p.methods.append(cstr(method.name))
-            self.print('-', cstr(method.name))
+            key = '- ' + cstr(method.name)
+            p.methods.append(key)
+            self.print(key)
         self.print('@end')
         self.print()
         self.protocols.append(p)
@@ -205,14 +207,15 @@ class ClassDump(object):
 
         self.print('@interface', cstr(clazz_info.name))
         for method in method_list(meta_info.base_meths):
-            key = cstr(method.name)
+            key = '+ ' + cstr(method.name)
             c.methods[key] = method.imp
-            self.print('+', cstr(method.name))
+            self.print(key)
 
         for method in method_list(clazz_info.base_meths):
-            key = cstr(method.name)
+            key = '- ' + cstr(method.name)
             c.methods[key] = method.imp
-            self.print('-', cstr(method.name))
+            self.print(key)
+
         self.print('@end')
         self.print()
 
