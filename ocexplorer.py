@@ -166,9 +166,18 @@ class ClassDump(object):
         for ea in range(protocols.start_ea, protocols.end_ea, 8):
             self.handle_protocol(ea)
 
+            if len(self.protocols) > 1024:
+                print('Threshold exceed')
+                break
+
+
     def handle_class_seg(self, classes):
         for ea in range(classes.start_ea, classes.end_ea, 8):
             self.handle_class(ea)
+            
+            if len(self.classes) > 1024:
+                print('Threshold exceed')
+                break
 
     def handle_protocol(self, ea):
         protocol_ea = ida_bytes.get_qword(ea)
