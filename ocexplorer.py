@@ -263,15 +263,17 @@ class ClassView(PluginForm):
         class_root.setText(0, 'Classes')
         class_root.setExpanded(True)
 
+        x = lambda ea: '0x%X' % ea
+
         for clazz in self.data.classes:
             item = QtWidgets.QTreeWidgetItem(class_root)
             item.setText(0, clazz.name)
-            item.setText(1, hex(clazz.ea).upper())
+            item.setText(1, x(clazz.ea))
 
             for method, imp in clazz.methods.items():
                 child = QtWidgets.QTreeWidgetItem(item)
                 child.setText(0, method)
-                child.setText(1, hex(imp).upper())
+                child.setText(1, x(imp))
 
         protocol_root = QtWidgets.QTreeWidgetItem(self.tree)
         protocol_root.setText(0, 'Protocols')
@@ -280,13 +282,13 @@ class ClassView(PluginForm):
         for proto in self.data.protocols:
             item = QtWidgets.QTreeWidgetItem(protocol_root)
             item.setText(0, proto.name)
-            item.setText(1, hex(proto.ea).upper())
+            item.setText(1, x(proto.ea))
 
             for method in proto.methods:
                 child = QtWidgets.QTreeWidgetItem(item)
                 child.setText(0, method)
                 # todo:
-                child.setText(1, hex(proto.ea).upper())
+                child.setText(1, x(proto.ea))
 
 
     def OnCreate(self, form):
