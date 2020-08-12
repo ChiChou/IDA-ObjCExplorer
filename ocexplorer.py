@@ -266,15 +266,28 @@ class ClassView(PluginForm):
         for clazz in self.data.classes:
             item = QtWidgets.QTreeWidgetItem(class_root)
             item.setText(0, clazz.name)
-            item.setText(1, hex(clazz.ea))
+            item.setText(1, hex(clazz.ea).upper())
 
             for method, imp in clazz.methods.items():
                 child = QtWidgets.QTreeWidgetItem(item)
                 child.setText(0, method)
-                child.setText(1, hex(imp))
+                child.setText(1, hex(imp).upper())
 
         protocol_root = QtWidgets.QTreeWidgetItem(self.tree)
         protocol_root.setText(0, 'Protocols')
+        
+        # todo: refactor
+        for proto in self.data.protocols:
+            item = QtWidgets.QTreeWidgetItem(protocol_root)
+            item.setText(0, proto.name)
+            item.setText(1, hex(proto.ea).upper())
+
+            for method in proto.methods:
+                child = QtWidgets.QTreeWidgetItem(item)
+                child.setText(0, method)
+                # todo:
+                child.setText(1, hex(proto.ea).upper())
+
 
     def OnCreate(self, form):
         '''Called when the plugin form is created'''
