@@ -11,5 +11,5 @@ Thanks to [trailofbits/ObjCGraphView](https://github.com/trailofbits/ObjCGraphVi
 TODO:
 
 * Swift?
-* Direct methods and new iOS runtime support?
+* Direct methods and new iOS runtime support (https://developer.apple.com/videos/play/wwdc2020/10163/)
 * xref
