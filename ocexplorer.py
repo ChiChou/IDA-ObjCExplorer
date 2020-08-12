@@ -326,7 +326,7 @@ class ObjCExplorer(ida_idaapi.plugin_t):
     """Class that is required for the code to be recognized as
     a plugin by IDA."""
     flags = 0
-    comment = "Display microcode"
+    comment = "classdump"
     help = comment
     wanted_name = PLUGIN_NAME
     wanted_hotkey = "Ctrl-Shift-E"
