@@ -170,7 +170,7 @@ class ClassDump(object):
         for ea in range(protocols.start_ea, protocols.end_ea, 8):
             self.handle_protocol(ea)
 
-            if len(self.protocols) > 1024:
+            if len(self.protocols) > 4096:
                 print('Threshold exceed')
                 break
 
@@ -178,7 +178,7 @@ class ClassDump(object):
         for ea in range(classes.start_ea, classes.end_ea, 8):
             self.handle_class(ea)
 
-            if len(self.classes) > 1024:
+            if len(self.classes) > 4096:
                 print('Threshold exceed')
                 break
 
