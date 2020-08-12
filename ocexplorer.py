@@ -4,10 +4,14 @@ import idaapi
 import ida_segment
 import ida_bytes
 import ida_nalt
+import ida_idaapi
 
 import ida_kernwin as kw
 from idaapi import PluginForm
 from PyQt5 import QtWidgets, QtGui
+
+
+PLUGIN_NAME = 'ObjCExplorer'
 
 
 def cstr(ea):
@@ -170,11 +174,10 @@ class ClassDump(object):
                 print('Threshold exceed')
                 break
 
-
     def handle_class_seg(self, classes):
         for ea in range(classes.start_ea, classes.end_ea, 8):
             self.handle_class(ea)
-            
+
             if len(self.classes) > 1024:
                 print('Threshold exceed')
                 break
@@ -273,7 +276,6 @@ class ClassView(PluginForm):
         protocol_root = QtWidgets.QTreeWidgetItem(self.tree)
         protocol_root.setText(0, 'Protocols')
 
-
     def OnCreate(self, form):
         '''Called when the plugin form is created'''
 
@@ -304,9 +306,30 @@ class ClassView(PluginForm):
         return PluginForm.Show(self, 'ClassDump')
 
 
-def main():
-    view = ClassView()
-    view.Show()
+class ObjCExplorer(ida_idaapi.plugin_t):
+    """Class that is required for the code to be recognized as
+    a plugin by IDA."""
+    flags = 0
+    comment = "Display microcode"
+    help = comment
+    wanted_name = PLUGIN_NAME
+    wanted_hotkey = "Ctrl-Shift-E"
+
+    def is_compatible(self):
+        # todo: check version
+        return True
+
+    def init(self):
+        return (ida_idaapi.PLUGIN_OK if
+                self.is_compatible() else ida_idaapi.PLUGIN_SKIP)
+
+    def run(self, arg):
+        view = ClassView()
+        view.Show()
+
+    def term(self):
+        pass
+
 
     # path = kw.ask_file(0, '*.txt', 'Save to')
     # if not path:
@@ -321,5 +344,5 @@ def main():
     #     print(clazz.name)
 
 
-if __name__ == "__main__":
-    main()
+def PLUGIN_ENTRY():
+    return ObjCExplorer()
