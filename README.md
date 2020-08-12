@@ -2,6 +2,8 @@
 
 <kbd>Ctrl + Shift + E</kbd> to open this panel
 
+** Only tested on IDA 7.x **
+
 ![](img.png)
 
 Double click the list to jump to methods
