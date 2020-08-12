@@ -237,7 +237,8 @@ class ClassDump(object):
 
 
 class ClassView(PluginForm):
-    cols = ['Name', 'Reference']
+    # todo: classref
+    cols = ['Name', 'Address']
 
     def __init__(self):
         super(ClassView, self).__init__()
