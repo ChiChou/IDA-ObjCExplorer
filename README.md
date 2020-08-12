@@ -7,3 +7,9 @@
 Double click the list to jump to methods
 
 Thanks to [trailofbits/ObjCGraphView](https://github.com/trailofbits/ObjCGraphView)
+
+TODO:
+
+* Swift?
+* Direct methods and new iOS runtime support?
+* xref
