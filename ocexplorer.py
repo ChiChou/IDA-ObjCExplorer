@@ -332,8 +332,7 @@ class ObjCExplorer(ida_idaapi.plugin_t):
     wanted_hotkey = "Ctrl-Shift-E"
 
     def is_compatible(self):
-        # todo: check version
-        return True
+        return idaapi.IDA_SDK_VERSION >= 700
 
     def init(self):
         return (ida_idaapi.PLUGIN_OK if
