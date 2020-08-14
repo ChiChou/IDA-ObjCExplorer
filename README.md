@@ -2,7 +2,7 @@
 
 <kbd>Ctrl + Shift + E</kbd> to open this panel
 
-** Only tested on IDA 7.x **
+**Only tested on IDA 7.x. Python2 is NOT supported**
 
 ![](img.png)
 
