@@ -1,5 +1,7 @@
 import struct
+from collections import namedtuple
 
+import idc
 import idaapi
 import ida_segment
 import ida_bytes
@@ -86,17 +88,33 @@ class Objc2Method(object):
         (self.name, self.types, self.imp) = struct.unpack_from(
             self.fmt, data, offset)
 
+Post14Method = namedtuple('Method', ['name', 'types', 'imp'])
 
 def method_list(ea):
     if not ea:
         return
 
     count = ida_bytes.get_dword(ea + 4)
+    name = idc.get_segm_name(ea)
     first = ea + 8
+
+    def post14format(addr):
+        for _ in range(3):
+            data = ida_bytes.get_bytes(addr, 4)
+            offset, = struct.unpack('<i', data)
+            yield addr + offset
+            addr += 4
+        
+    is14 = name and (name.endswith(':__objc_const_ax') or name.endswith(':__objc_methlist'))
     for i in range(count):
-        ea_method_t = first + i * Objc2Method.length
-        data = ida_bytes.get_bytes(ea_method_t, Objc2Method.length)
-        yield Objc2Method(data)
+        if is14:
+            # iOS 14
+            yield Post14Method(*post14format(first + i * 12))
+
+        else:
+            ea_method_t = first + i * Objc2Method.length
+            data = ida_bytes.get_bytes(ea_method_t, Objc2Method.length)
+            yield Objc2Method(data)
 
 
 class Base(object):
@@ -170,7 +188,7 @@ class ClassDump(object):
         for ea in range(protocols.start_ea, protocols.end_ea, 8):
             self.handle_protocol(ea)
 
-            if len(self.protocols) > 4096:
+            if not (self.output or self.verbose) and len(self.protocols) > 4096:
                 print('Threshold exceed')
                 break
 
@@ -178,7 +196,7 @@ class ClassDump(object):
         for ea in range(classes.start_ea, classes.end_ea, 8):
             self.handle_class(ea)
 
-            if len(self.classes) > 4096:
+            if not (self.output or self.verbose) and len(self.protocols) > 4096:
                 print('Threshold exceed')
                 break
 
@@ -253,10 +271,8 @@ class ClassView(PluginForm):
             pass
 
     def load_data(self):
-        kw.show_wait_box('Building class information')
         classdump = ClassDump()
         classdump.parse()
-        kw.hide_wait_box()
 
         self.data = classdump
 
@@ -339,24 +355,27 @@ class ObjCExplorer(ida_idaapi.plugin_t):
                 self.is_compatible() else ida_idaapi.PLUGIN_SKIP)
 
     def run(self, arg):
-        view = ClassView()
-        view.Show()
+        kw.show_wait_box('Building class information')
+        try:
+            view = ClassView()
+            view.Show()
+        finally:
+            kw.hide_wait_box()
 
     def term(self):
         pass
 
 
-    # path = kw.ask_file(0, '*.txt', 'Save to')
-    # if not path:
-    #     print('Cancelled')
-    #     return
+# todo: add this to menu
+def export():
+    path = kw.ask_file(1, '*.txt', 'Save to')
+    if not path:
+        print('Cancelled')
+        return
 
-    # with open(path, 'a') as fp:
-    #     classdump = ClassDump(output=fp)
-    #     classdump.parse()
-
-    # for clazz in classdump.classes:
-    #     print(clazz.name)
+    with open(path, 'a') as fp:
+        classdump = ClassDump(output=fp)
+        classdump.parse()
 
 
 def PLUGIN_ENTRY():
