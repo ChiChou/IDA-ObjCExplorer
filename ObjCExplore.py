@@ -189,7 +189,7 @@ class ClassDump(object):
             self.handle_protocol(ea)
 
             if not (self.output or self.verbose) and len(self.protocols) > 4096:
-                print('Threshold exceed')
+                print('Threshold exceeded')
                 break
 
     def handle_class_seg(self, classes):
@@ -197,7 +197,7 @@ class ClassDump(object):
             self.handle_class(ea)
 
             if not (self.output or self.verbose) and len(self.protocols) > 4096:
-                print('Threshold exceed')
+                print('Threshold exceeded')
                 break
 
     def handle_protocol(self, ea):
