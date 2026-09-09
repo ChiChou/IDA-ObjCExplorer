@@ -68,3 +68,6 @@ ABI references: [Apple objc4](https://github.com/apple-oss-distributions/objc4),
 [IDAPython SDK](https://python.docs.hex-rays.com/).
 
 Thanks to [trailofbits/ObjCGraphView](https://github.com/trailofbits/ObjCGraphView).
+
+Proposed Swift inspection, signature/header export, GUI tools, code generators
+and naming direction are in [docs/roadmap.md](docs/roadmap.md).
