@@ -17,6 +17,7 @@ plugins/
 ├── ObjCExplore.py
 └── objc_explorer/
     ├── __init__.py
+    ├── headers.py
     ├── ida_reader.py
     └── runtime.py
 ```
@@ -28,10 +29,18 @@ Restart IDA, load a binary, and press **Ctrl + Shift + E** (or select
 **Edit → Plugins → ObjCExplorer**). For development, run `ObjCExplore.py` using
 **File → Script file** without installing it.
 
-Use the browser's **Export dump…** context-menu action to save a UTF-8 inspection
-dump. It includes raw type encodings, properties, ivars and diagnostics; it is
-not a compilable header.
-Existing destinations are replaced after IDA's save dialog confirms them.
+Use the browser's **Export Objective-C header…** context-menu action to save a
+UTF-8 `.h` file for the loaded module. The save dialog suggests its name, such
+as `amfid.h` or `libExample.h`; `module.h` is the fallback when no input name is
+available. Existing destinations are replaced after IDA's save dialog confirms
+them.
+
+The header includes recovered method declarations, properties, ivars, protocols
+and categories. Missing argument names are generated. Unsupported declarations
+remain comments with their original encoding, and missing external definitions
+may require additional imports. This is recovered metadata, not the original
+source header. The raw inspection format remains available through
+`ClassDump.write(output)` for scripts.
 
 ## Runtime support
 
@@ -57,6 +66,14 @@ Run the standalone parser and IDA-adapter fixture tests:
 
 ```sh
 python3 -m unittest discover -s tests -v
+```
+
+On macOS with Xcode Command Line Tools, validate header export against runtime
+encodings from the included Objective-C fixture and compile its generated
+declarations for arm64 and x86_64:
+
+```sh
+python3 tests/fixtures/export_headers/validate.py
 ```
 
 GUI validation details and tested sample versions are recorded in

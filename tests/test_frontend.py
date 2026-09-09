@@ -1,7 +1,7 @@
 """Native chooser behavior without an IDA installation or Python Qt binding.
 
 The mock implements only the chooser lifecycle used by the frontend. Actual
-widget creation and popup interaction are covered by the IDA GUI smoke test.
+widget creation requires the IDA GUI smoke test.
 """
 
 import builtins
@@ -62,6 +62,8 @@ class NativeHost:
                                            PLUGIN_MULTI=1, PLUGIN_SKIP=0,
                                            BADADDR=(1 << 64) - 1),
             "ida_bytes": SimpleNamespace(is_mapped=lambda ea: 0x1000 <= ea < 0x6000),
+            "ida_nalt": SimpleNamespace(get_root_filename=Mock(return_value="amfid"),
+                                         get_input_file_path=Mock(return_value="/usr/libexec/amfid")),
             "objc_explorer.ida_reader": SimpleNamespace(IDAReader=object),
         }
 
@@ -198,7 +200,7 @@ class FrontendTests(unittest.TestCase):
         view = self.plugin.ClassView(self.data)
         view.OnPopup(None, "popup")
         action = self.host.kw.attach_dynamic_action_to_popup.call_args.args[2]
-        self.assertIn("Export dump", action.label)
+        self.assertEqual("Export Objective-C header…", action.label)
         self.assertEqual(action.handler.update(None), self.host.kw.AST_ENABLE_ALWAYS)
         return action.handler
 
@@ -208,27 +210,64 @@ class FrontendTests(unittest.TestCase):
             self.assertEqual(action.activate(None), 1)
             opening.assert_not_called()
             parser.assert_not_called()
-        self.host.kw.ask_file.assert_called_once()
+        self.host.kw.ask_file.assert_called_once_with(True, "amfid.h", "Save Objective-C header")
         self.host.kw.warning.assert_not_called()
 
     def test_popup_exports_existing_snapshot_as_utf8(self):
         self.obj.name = "Exämple"
         action = self.popup_action()
         with tempfile.TemporaryDirectory() as directory:
-            destination = Path(directory) / "dump.txt"
+            destination = Path(directory) / "amfid.h"
             self.host.kw.ask_file.return_value = str(destination)
             with patch.object(self.plugin, "ClassDump") as parser:
                 self.assertEqual(action.activate(None), 1)
                 parser.assert_not_called()
             exported = destination.read_text(encoding="utf-8")
         self.assertIn("@interface Exämple : NSObject", exported)
-        self.assertIn("v24@0:8@16", exported)
+        self.assertIn("- (void)run:(id)arg0;", exported)
+        self.assertIn("@property", exported)
         self.host.kw.warning.assert_not_called()
+
+    def test_header_filename_uses_module_and_preserves_interior_dots(self):
+        nalt = self.host.modules["ida_nalt"]
+        for source, expected in (("libExample.1.dylib", "libExample.1.h"),
+                                 ("com.apple.helper", "com.apple.helper.h"),
+                                 (r"C:\\bin\\Example.EXE", "Example.h")):
+            with self.subTest(source=source):
+                nalt.get_root_filename.return_value = source
+                self.plugin.export(self.data)
+                self.host.kw.ask_file.assert_called_with(True, expected, "Save Objective-C header")
+        nalt.get_root_filename.return_value = None
+        nalt.get_input_file_path.return_value = "/tmp/rapportd"
+        self.plugin.export(self.data)
+        self.host.kw.ask_file.assert_called_with(True, "rapportd.h", "Save Objective-C header")
+        nalt.get_input_file_path.return_value = None
+        self.plugin.export(self.data)
+        self.host.kw.ask_file.assert_called_with(True, "module.h", "Save Objective-C header")
+
+    def test_header_export_replaces_existing_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "amfid.h"
+            destination.write_text("old contents", encoding="utf-8")
+            self.assertTrue(self.plugin.export(self.data, str(destination)))
+            exported = destination.read_text(encoding="utf-8")
+        self.assertNotIn("old contents", exported)
+        self.assertIn("- (void)run:(id)arg0;", exported)
+        self.host.kw.ask_file.assert_not_called()
 
     def test_export_error_is_reported(self):
         with patch("builtins.open", side_effect=PermissionError("read-only destination")):
-            self.assertFalse(self.plugin.export(self.data, "/unwritable/dump.txt"))
+            self.assertFalse(self.plugin.export(self.data, "/unwritable/amfid.h"))
         self.assertIn("read-only destination", self.host.kw.warning.call_args.args[0])
+
+    def test_header_formatting_error_preserves_existing_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "amfid.h"
+            destination.write_text("existing header", encoding="utf-8")
+            with patch.object(self.plugin, "render_header", side_effect=ValueError("invalid metadata")):
+                self.assertFalse(self.plugin.export(self.data, str(destination)))
+            self.assertEqual(destination.read_text(encoding="utf-8"), "existing header")
+        self.assertIn("invalid metadata", self.host.kw.warning.call_args.args[0])
 
     def test_failed_parse_releases_wait_box_and_does_not_open_view(self):
         session = self.plugin.ExplorerSession()

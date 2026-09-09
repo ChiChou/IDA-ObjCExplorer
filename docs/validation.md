@@ -2,6 +2,7 @@
 
 Validation date: 2026-09-09. Host: macOS 27.0, build 26A5425a, arm64.
 IDA Professional 9.4.260714.951e98a4, IDAPython SDK 940, Python 3.14.7.
+The results below record the compatibility baseline at commit `b9a230e`.
 
 ## Automated fixtures
 
@@ -119,3 +120,29 @@ optimization layouts have fixture coverage; real GUI validation targets IDA
 still needed before claiming end-to-end support for every cache version.
 Swift class flags are recognized, but native Swift reflection structures and
 live realized Objective-C class metadata are outside this fix.
+
+## Header export follow-up
+
+The GUI export action now creates Objective-C inspection headers and proposes
+`<module>.h` (falling back to `module.h`). Frontend tests verify the action label,
+filename handling, cancellation, UTF-8 output, replacement and preservation of
+an existing file when formatting fails. The original raw `ClassDump.write`
+format remains available for the independent comparisons above.
+The full standalone suite now passes **72 tests**, including 15 focused header
+export tests for declarators, dependencies and malformed/unsupported encodings.
+
+`tests/fixtures/export_headers/validate.py` builds and runs the included
+project-owned Objective-C fixture on the arm64 host, captures its runtime
+encodings, renders a header, and compiles a consumer with `-Werror` for
+`arm64-apple-macos11` and `x86_64-apple-macos11`. Both compile checks passed.
+The fixture contains two classes, two protocols and a category. It checks
+dependency ordering, class properties, custom accessors, protocol qualifications,
+record size/alignment, pointer-to-array arguments and unsupported block
+signatures. The x86_64 check verifies declaration compilation; it does not
+claim an independent capture of x86_64 runtime encodings.
+
+The archived `amfid` and `rapportd` inspection dumps also rendered successfully
+through the new exporter. Missing external definitions, Swift-only field types,
+block signatures and other unsupported encodings are still limitations of
+source recovery; the generated comments identify them. The new save-dialog
+defaults have SDK/mock coverage, not an additional complete GUI run on this host.

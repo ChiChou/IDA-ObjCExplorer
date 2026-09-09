@@ -1,8 +1,11 @@
 # Next features and project identity
 
 Exploration dated 2026-09-09, after compatibility commit `b9a230e`.
-Everything below is proposed work. The implemented baseline and its remaining
-GUI/cache coverage limits are in [validation.md](validation.md).
+The stages below describe proposed work beyond the shipped features. A later
+follow-up added basic Objective-C header export with a module-derived filename;
+the full type registry, JSON export, preview and template generators remain
+proposals. The original compatibility baseline and its remaining GUI/cache
+coverage limits are in [validation.md](validation.md).
 
 ## Recommendation
 

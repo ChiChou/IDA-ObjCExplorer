@@ -6,6 +6,7 @@ import ida_idaapi
 import ida_pro
 import ida_kernwin as kw
 import ida_bytes
+import ida_nalt
 
 # IDA may load plugins without adding their directory to sys.path.
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +15,7 @@ if _MODULE_DIR not in sys.path:
 
 from objc_explorer.ida_reader import IDAReader
 from objc_explorer.runtime import ObjCRuntime
+from objc_explorer.headers import render_header
 
 PLUGIN_NAME = 'ObjCExplorer'
 
@@ -67,9 +69,20 @@ class ClassDump(ObjCRuntime):
             print('// ' + diagnostic, file=output)
 
 
+def _module_name():
+    """Use the input module name, without a known binary suffix or directory."""
+    name = ida_nalt.get_root_filename() or ida_nalt.get_input_file_path() or ''
+    name = os.path.basename(name.replace('\\', '/'))
+    stem, suffix = os.path.splitext(name)
+    if suffix.lower() in ('.dylib', '.so', '.bundle', '.dll', '.exe', '.o', '.bin'):
+        name = stem
+    return name if name not in ('', '.', '..') else 'module'
+
+
 def export(data=None, path=None):
-    """Export a new UTF-8 dump, replacing a confirmed destination."""
-    path = path or kw.ask_file(True, '*.txt', 'Save Objective-C metadata dump')
+    """Export a UTF-8 Objective-C header, replacing a confirmed destination."""
+    module_name = _module_name()
+    path = path or kw.ask_file(True, module_name + '.h', 'Save Objective-C header')
     if not path:
         return False
     if data is None:
@@ -79,16 +92,17 @@ def export(data=None, path=None):
         finally:
             kw.hide_wait_box()
     try:
+        header = render_header(data, module_name=module_name)
         with open(path, 'w', encoding='utf-8') as output:
-            data.write(output)
-    except OSError as exc:
-        kw.warning('Could not save Objective-C dump: %s' % exc)
+            output.write(header)
+    except (OSError, ValueError) as exc:
+        kw.warning('Could not save Objective-C header: %s' % exc)
         return False
     kw.msg('[%s] Exported %s\n' % (PLUGIN_NAME, path))
     return True
 
 
-class _ExportDumpAction(kw.action_handler_t):
+class _ExportHeaderAction(kw.action_handler_t):
     def __init__(self, data):
         super().__init__()
         self.data = data
@@ -109,7 +123,8 @@ class _NativeChooser(kw.Choose):
         self.on_close = on_close
 
     def OnPopup(self, widget, popup_handle):
-        action = kw.action_desc_t(None, 'Export dump…', _ExportDumpAction(self.data))
+        action = kw.action_desc_t(None, 'Export Objective-C header…',
+                                  _ExportHeaderAction(self.data))
         kw.attach_dynamic_action_to_popup(None, popup_handle, action)
 
     def Show(self):
